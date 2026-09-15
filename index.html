@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI-Powered Customer Support Chatbot</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,sans-serif;background:#f3f6fb;color:#172033}
+.wrapper{max-width:950px;margin:35px auto;padding:15px}
+.card{background:#fff;border-radius:18px;box-shadow:0 10px 35px rgba(0,0,0,.08);overflow:hidden}
+.header{background:#2457d6;color:white;padding:25px}
+.header h1{margin:0 0 7px}.header p{margin:0;opacity:.9}
+.status{padding:10px 20px;background:#f8fafc;font-size:13px;color:#526071}
+#chat{height:500px;overflow-y:auto;padding:20px}
+.msg{max-width:78%;padding:13px 16px;border-radius:15px;margin:12px 0;line-height:1.5;white-space:pre-wrap}
+.user{margin-left:auto;background:#dbeafe}
+.bot{background:#eef2ff}
+.meta{font-size:12px;color:#687386;margin-top:6px}
+.quick{padding:0 18px 16px;display:flex;gap:8px;flex-wrap:wrap}
+.quick button{background:#e8edf5;color:#1f2937}
+.input{display:flex;gap:10px;padding:17px;border-top:1px solid #e5e7eb}
+input{flex:1;padding:14px;border:1px solid #cbd5e1;border-radius:10px;font-size:16px}
+button{border:0;border-radius:10px;padding:12px 17px;background:#2457d6;color:#fff;font-weight:bold;cursor:pointer}
+.footer{padding:12px 20px;font-size:12px;color:#687386}
+</style>
+</head>
+<body>
+<div class="wrapper">
+<div class="card">
+<div class="header">
+<h1>🤖 AI-Powered Customer Support Chatbot</h1>
+<p>NLP + Transformers + Flask + SQLite</p>
+</div>
+<div class="status">
+Features: FAQ NLP matching • Transformer responses • Conversation context • Sentiment analysis • SQLite logs
+</div>
+<div id="chat">
+<div class="msg bot">Hello! 👋 I'm your AI customer-support assistant. Ask me anything about registration, login, passwords, support, or features.</div>
+</div>
+<div class="quick">
+<button onclick="quickAsk('What can you do?')">Features</button>
+<button onclick="quickAsk('How do I register?')">Registration</button>
+<button onclick="quickAsk('I forgot my password')">Password</button>
+<button onclick="quickAsk('How can I contact support?')">Support</button>
+</div>
+<div class="input">
+<input id="message" placeholder="Type your question..." autocomplete="off"
+       onkeydown="if(event.key==='Enter')sendMessage()">
+<button onclick="sendMessage()">Send</button>
+</div>
+<div class="footer">Every interaction is recorded locally in SQLite for demonstration and analytics.</div>
+</div>
+</div>
+<script>
+const sessionId = "web-" + Date.now();
+let history = [];
+
+function addMessage(text, cls, meta=""){
+    const wrapper = document.createElement("div");
+    wrapper.className = "msg " + cls;
+    wrapper.textContent = text;
+    if(meta){
+        const m = document.createElement("div");
+        m.className = "meta";
+        m.textContent = meta;
+        wrapper.appendChild(m);
+    }
+    document.getElementById("chat").appendChild(wrapper);
+    const box = document.getElementById("chat");
+    box.scrollTop = box.scrollHeight;
+}
+
+async function sendMessage(){
+    const input = document.getElementById("message");
+    const text = input.value.trim();
+    if(!text) return;
+
+    addMessage(text, "user");
+    input.value = "";
+
+    try{
+        const res = await fetch("/chat", {
+            method:"POST",
+            headers:{"Content-Type":"application/json"},
+            body:JSON.stringify({
+                message:text,
+                session_id:sessionId,
+                history:history.slice(-6)
+            })
+        });
+
+        const data = await res.json();
+        if(!res.ok){
+            addMessage(data.error || "Something went wrong.", "bot");
+            return;
+        }
+
+        addMessage(
+            data.response,
+            "bot",
+            "Intent: " + data.intent + " | Sentiment: " + data.sentiment
+        );
+
+        history.push({user:text, bot:data.response});
+    }catch(error){
+        addMessage("Unable to connect to the server. Please make sure Flask is running.", "bot");
+    }
+}
+
+function quickAsk(text){
+    document.getElementById("message").value = text;
+    sendMessage();
+}
+</script>
+</body>
+</html>
